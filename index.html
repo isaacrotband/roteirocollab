@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Roteiros da Collab: skill para o Claude que gera roteiros virais.">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Roteiros da Collab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Jost:wght@300;400;500;600&display=swap">
+<style>
+/* Layout: um lookbook. Cada página é um "slide" com sombra sobre uma mesa cinza, em blocos de cor (cinza, laranja, amarelo-ácido, verde), wordmark geométrica e tipo pesado gigante. Visual único, não muda com tema claro/escuro. */
+:root {
+  --canvas: #a9a9a6;
+  --slide: #e4e4e1;
+  --card: #f5f5f2;
+  --ink: #131313;
+  --muted: #56564f;
+  --marker: #c9c9c4;
+  --line: rgba(19, 19, 19, .22);
+  --orange: #ff5419;
+  --acid: #e4e23a;
+  --green: #1c9a50;
+  --red: #ff5419;
+  --on-ink: #f5f5f2;
+  --f-heavy: "Archivo", "Arial Black", Arial, sans-serif;
+  --f-geo: "Jost", "Futura", "Century Gothic", "Avenir Next", sans-serif;
+  --f-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--canvas); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.55; }
+h1, h2, h3, h4 { margin: 0; line-height: 1.05; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--ink); }
+:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+
+.heavy { font-family: var(--f-heavy); font-weight: 900; font-variation-settings: "wdth" 112; text-transform: uppercase; letter-spacing: -.02em; }
+.geo { font-family: var(--f-geo); font-weight: 500; }
+.meta { font-family: var(--f-body); font-weight: 700; font-size: 13px; line-height: 1.3; }
+.meta span { display: block; font-weight: 400; }
+
+/* mesa e slides */
+.deck {
+  display: grid; gap: clamp(28px, 5vw, 56px);
+  padding-block: clamp(20px, 4vw, 44px) clamp(40px, 6vw, 72px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { display: grid; gap: clamp(28px, 5vw, 56px); scroll-margin-top: 70px; }
+.slide {
+  width: 100%; max-width: 1240px; margin: 0 auto; position: relative; overflow: hidden;
+  background: var(--slide); box-shadow: 10px 12px 0 rgba(0, 0, 0, .2); container-type: inline-size;
+}
+.slide.orange { background: var(--orange); }
+.slide.acid { background: var(--acid); }
+.slide.green { background: var(--green); color: var(--ink); }
+.in { padding: clamp(18px, 3.4vw, 44px); }
+.metarow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: start; }
+.metarow > :nth-child(2) { text-align: center; }
+.metarow > :last-child { text-align: right; }
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 45%; }
+    @keyframes reveal { from { opacity: .2; transform: translateY(60px) scale(.985); } to { opacity: 1; transform: none; } }
+  }
+}
+
+/* navegação */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--slide); box-shadow: 0 4px 0 rgba(0, 0, 0, .12); }
+.topbar .bar { max-width: 1240px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px 20px; flex-wrap: wrap; padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.brand { font-family: var(--f-geo); font-weight: 500; font-size: 19px; letter-spacing: .04em; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+.brand::before, .brand::after { content: ""; width: 16px; height: 3px; background: var(--ink); }
+.tabs { display: flex; gap: 4px 18px; flex-wrap: wrap; }
+.tabs a { font-family: var(--f-body); font-weight: 700; font-size: 14px; text-decoration: none; padding: 4px 0; border-bottom: 3px solid transparent; }
+.tabs a b { font-weight: 400; color: var(--muted); margin-right: 5px; }
+.tabs a:hover { border-bottom-color: var(--line); }
+.tabs a[aria-current="page"] { border-bottom-color: var(--orange); }
+
+/* foto P&B e cantos */
+.photo-box { position: relative; overflow: hidden; background: #111; }
+.photo-box img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; filter: grayscale(1) contrast(1.1); }
+.crop { position: absolute; z-index: 2; width: clamp(20px, 2.8vw, 34px); height: clamp(20px, 2.8vw, 34px); border: 0 solid #f5f5f2; }
+.crop.tl { top: 16px; left: 16px; border-top-width: 3px; border-left-width: 3px; }
+.crop.tr { top: 16px; right: 16px; border-top-width: 3px; border-right-width: 3px; }
+.crop.bl { bottom: 16px; left: 16px; border-bottom-width: 3px; border-left-width: 3px; }
+.crop.br { bottom: 16px; right: 16px; border-bottom-width: 3px; border-right-width: 3px; }
+
+/* ---------- capa ---------- */
+.cover-photo { min-height: clamp(340px, 40vw, 500px); display: flex; align-items: flex-end; }
+.cover-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.05) 50%, rgba(0,0,0,.45)); }
+.cover-photo h1 {
+  position: relative; z-index: 3; color: var(--acid); width: 100%;
+  font-size: min(13.5cqw, 176px); line-height: .78; white-space: nowrap; text-align: center;
+  padding-bottom: clamp(26px, 3.4vw, 44px);
+}
+.reg { display: inline-block; position: relative; overflow: hidden; width: .74em; height: .74em; border: .085em solid currentColor; border-radius: 50%; margin: 0 .02em; }
+.reg span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .4em; line-height: 1; }
+.cover-band .da { font-size: min(11.6cqw, 150px); line-height: .8; white-space: nowrap; text-align: center; padding-block: clamp(14px, 2vw, 24px) clamp(18px, 3vw, 34px); }
+.band-grid { display: grid; grid-template-columns: 1fr 1fr 1.2fr auto; gap: 20px 28px; align-items: end; border-top: 2px solid var(--ink); padding-top: 18px; }
+.band-grid p { font-size: 14px; line-height: 1.35; max-width: 34ch; }
+.band-grid a { font-weight: 700; }
+.reels { width: clamp(110px, 13vw, 160px); }
+.reels circle, .reels path { fill: none; stroke: var(--ink); stroke-width: 5; }
+.reels .hole { fill: var(--ink); stroke: none; }
+@media (max-width: 760px) {
+  .band-grid { grid-template-columns: 1fr 1fr; }
+  .band-grid .reels { grid-column: 2; justify-self: end; }
+}
+
+/* ---------- apresentação (slide "welcome") ---------- */
+.welcome { display: grid; grid-template-columns: minmax(0, 300px) auto minmax(0, 1fr); gap: clamp(16px, 3vw, 40px); align-items: start; }
+.welcome .photo-box { aspect-ratio: 3 / 4; max-width: 100%; }
+.welcome .photo-box img { object-position: 62% 50%; }
+.vert { writing-mode: vertical-rl; font-family: var(--f-geo); font-weight: 300; font-size: clamp(54px, 7vw, 96px); line-height: .9; letter-spacing: .01em; }
+.welcome-text { display: grid; gap: 18px; min-width: 0; position: relative; }
+.dot-o { position: absolute; top: 0; right: 0; width: 44px; height: 44px; border-radius: 50%; background: var(--orange); display: grid; place-items: center; }
+.dot-o::after { content: ""; width: 14px; height: 3px; background: var(--card); }
+.label { font-family: var(--f-body); font-weight: 700; font-size: 13px; }
+.welcome-text h2 { font-family: var(--f-geo); font-weight: 500; font-size: clamp(34px, 4.6vw, 58px); line-height: 1; padding-right: 56px; }
+.welcome-text .lead { font-size: 19px; max-width: 54ch; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 6px; }
+.cols > div { display: grid; gap: 12px; align-content: start; font-size: 15.5px; }
+.cols strong { font-weight: 800; }
+@media (max-width: 900px) {
+  .welcome { grid-template-columns: minmax(0, 1fr) auto; }
+  .welcome-text { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) { .cols { grid-template-columns: 1fr; } .vert { font-size: 48px; } }
+.chapter { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; margin-top: clamp(24px, 4vw, 44px); font-family: var(--f-geo); font-size: clamp(22px, 2.6vw, 30px); }
+.chapter i { height: 18px; border: 1.5px solid var(--ink); border-radius: 50%; }
+
+.names { display: grid; }
+.names div { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; border-bottom: 2px solid var(--ink); padding-block: 10px 12px; }
+.names div:first-child { border-top: 2px solid var(--ink); }
+.names .heavy { font-size: clamp(30px, 6.4vw, 84px); line-height: .9; }
+.names .meta { white-space: nowrap; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); gap: 24px; }
+.split > * { min-width: 0; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; gap: 12px; } }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.trio > div { padding: 22px; display: grid; gap: 8px; align-content: start; }
+.trio > div:nth-child(1) { background: var(--orange); }
+.trio > div:nth-child(2) { background: var(--acid); }
+.trio > div:nth-child(3) { background: var(--green); }
+.trio .heavy { font-size: clamp(24px, 2.6vw, 32px); line-height: .95; }
+@media (max-width: 760px) { .trio { grid-template-columns: 1fr; } }
+.arc-scroll { overflow-x: auto; background: var(--card); }
+.arc-scroll svg { min-width: 760px; }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; margin-top: 22px; }
+@media (max-width: 860px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .facts { grid-template-columns: 1fr; } }
+.fact { border-top: 2px solid var(--ink); padding-top: 10px; display: grid; gap: 4px; }
+.fact b { font-family: var(--f-geo); font-weight: 600; font-size: 20px; line-height: 1.1; }
+.fact span { color: var(--muted); font-size: 15px; }
+
+/* ---------- tutorial (slide "product") ---------- */
+.prod-photo { aspect-ratio: 21 / 8; margin-top: 18px; }
+.prod-photo img { object-position: 50% 30%; transform: scaleX(-1); }
+.mirror-word { position: relative; margin-top: clamp(10px, 2vw, 20px); text-align: center; }
+.mirror-word .heavy { display: block; font-size: min(12.6cqw, 160px); line-height: .8; white-space: nowrap; }
+.mirror-word .echo { transform: scaleY(-1); height: .36em; overflow: hidden; opacity: .9; line-height: .8; margin-top: -.02em; }
+.mirror-word .echo span { display: block; transform: translateY(-.44em); }
+.tut-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: end; border-top: 2px solid var(--ink); padding-top: 18px; margin-top: 14px; }
+.tut-intro p { font-size: 19px; max-width: 46ch; }
+@media (max-width: 760px) { .tut-intro { grid-template-columns: 1fr; } }
+.needs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+@media (max-width: 760px) { .needs { justify-content: flex-start; } }
+.needs span { font-weight: 700; font-size: 13px; background: var(--ink); color: var(--acid); padding: 6px 12px; border-radius: 99px; }
+
+.part-title { display: grid; justify-items: center; gap: 6px; margin-top: clamp(40px, 6vw, 72px); text-align: center; }
+.part-title:first-child { margin-top: 0; }
+.part-title .eyebrow { font-weight: 700; font-size: 13px; }
+.part-title h3 { font-family: var(--f-geo); font-weight: 500; text-transform: uppercase; font-size: clamp(28px, 4.6vw, 54px); letter-spacing: .03em; display: flex; align-items: center; gap: .4em; }
+.part-title h3::before, .part-title h3::after { content: ""; width: .7em; height: .09em; background: var(--ink); flex: none; }
+.steps { display: grid; gap: 18px; list-style: none; padding: 0; margin: 24px 0 0; counter-reset: passo; }
+.step { counter-increment: passo; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px; align-items: center; background: var(--card); padding: clamp(16px, 2.4vw, 26px); }
+@media (max-width: 760px) { .step { grid-template-columns: 1fr; gap: 16px; } }
+.step-text { display: grid; gap: 10px; min-width: 0; }
+.step-num { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+.step-num::before { content: counter(passo, decimal-leading-zero); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--orange); color: var(--ink); font-family: var(--f-geo); font-size: 17px; font-weight: 600; }
+.step h4 { font-family: var(--f-heavy); font-weight: 900; font-variation-settings: "wdth" 112; text-transform: uppercase; font-size: clamp(22px, 2.6vw, 30px); line-height: .98; letter-spacing: -.01em; }
+.step .tip { font-size: 15px; color: var(--muted); border-left: 3px solid var(--orange); padding-left: 12px; }
+.step code, .prompt-line { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 14px; background: var(--slide); padding: 2px 6px; overflow-wrap: anywhere; }
+.step-pic { background: var(--slide); overflow: hidden; min-width: 0; }
+.copy-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.copy-row .prompt-line { flex: 1 1 220px; padding: 10px 12px; font-size: 15px; }
+.copy-row button { font: 700 14px var(--f-body); border: 0; background: var(--ink); color: var(--on-ink); padding: 8px 16px; border-radius: 99px; cursor: pointer; }
+.copy-row button:hover { background: var(--orange); color: var(--ink); }
+.trouble { margin-top: clamp(32px, 5vw, 56px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 820px) { .trouble { grid-template-columns: 1fr; } }
+.trouble div { border-top: 3px solid var(--ink); padding-top: 12px; }
+.trouble b { display: block; margin-bottom: 6px; font-family: var(--f-geo); font-weight: 600; font-size: 19px; }
+.trouble p { font-size: 15px; color: var(--muted); }
+.trouble code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+
+/* ---------- downloads (slides verde e "product vertical") ---------- */
+.green-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: clamp(18px, 3vw, 40px); align-items: center; }
+@media (max-width: 760px) { .green-grid { grid-template-columns: 1fr; } }
+.green-grid .photo-box { aspect-ratio: 4 / 3; }
+.green-grid .photo-box img { object-position: 40% 50%; }
+.ruled { display: grid; gap: 0; text-align: center; }
+.ruled .geo { font-size: clamp(30px, 4.4vw, 58px); text-transform: uppercase; line-height: 1.1; padding-block: 8px; border-bottom: 2px solid var(--ink); }
+.ruled .geo:first-child { border-top: 2px solid var(--ink); }
+.ruled p { margin-top: 16px; font-size: 16px; text-align: left; max-width: 46ch; }
+.wordmark { font-family: var(--f-geo); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; font-size: 18px; margin-bottom: 18px; }
+
+.vertical-layout { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(16px, 3vw, 40px); }
+.rail { display: flex; gap: 14px; align-items: flex-start; }
+.rail .heavy { writing-mode: vertical-rl; transform: rotate(180deg); font-size: clamp(56px, 8vw, 116px); line-height: .82; }
+.rail .meta { writing-mode: vertical-rl; transform: rotate(180deg); }
+@media (max-width: 760px) {
+  .vertical-layout { grid-template-columns: 1fr; }
+  .rail .heavy, .rail .meta { writing-mode: horizontal-tb; transform: none; }
+  .rail { flex-direction: column; gap: 4px; }
+  .rail .heavy { font-size: clamp(40px, 13vw, 64px); }
+}
+.dl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: clamp(20px, 3vw, 36px); align-items: start; }
+@media (max-width: 980px) { .dl-grid { grid-template-columns: 1fr; } }
+.panel { background: var(--card); padding: clamp(16px, 2.4vw, 24px); display: grid; gap: 16px; min-width: 0; }
+.panel h3 { font-family: var(--f-heavy); font-weight: 900; font-variation-settings: "wdth" 112; text-transform: uppercase; font-size: clamp(22px, 2.6vw, 30px); line-height: .98; }
+.panel .eyebrow { font-weight: 700; font-size: 13px; }
+.file-card { display: grid; grid-template-columns: 56px 1fr; gap: 16px; align-items: center; }
+.file-card .icon { width: 56px; }
+.file-card b { display: block; font-size: 18px; overflow-wrap: anywhere; }
+.file-card span { color: var(--muted); font-size: 14px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; font: 700 17px/1 var(--f-body); color: var(--on-ink); background: var(--ink); border: 2px solid var(--ink); border-radius: 99px; padding: 16px 22px; cursor: pointer; text-decoration: none; }
+.btn:hover { background: var(--orange); border-color: var(--orange); color: var(--ink); }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn.ghost:hover { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+.btn[disabled] { opacity: .5; cursor: progress; }
+.big-btn { width: 100%; font-size: 18px; padding: 19px; }
+.inside { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 15px; }
+.inside li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.inside li code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.inside li span { color: var(--muted); font-size: 14px; text-align: right; }
+.dl-msg { font-size: 15px; color: var(--muted); min-height: 1.4em; }
+.dl-msg.err { color: #c2380c; font-weight: 700; }
+.ref-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 460px) { .ref-meta { grid-template-columns: 1fr; } }
+.ref-meta div { background: var(--slide); padding: 10px 12px; }
+.ref-meta small { display: block; font-size: 12px; font-weight: 700; color: var(--muted); }
+.ref-meta b { font-size: 15px; }
+.viewer { display: grid; gap: 10px; }
+.viewer-main { overflow: hidden; background: #fff; box-shadow: 6px 6px 0 rgba(0,0,0,.15); }
+.viewer-main img { display: block; width: 100%; height: auto; }
+.thumbs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.thumbs button { padding: 0; border: 3px solid transparent; overflow: hidden; background: #fff; cursor: pointer; }
+.thumbs button[aria-pressed="true"] { border-color: var(--orange); }
+.thumbs img { display: block; width: 100%; height: auto; }
+.thumbs-label { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+/* ilustrações do tutorial */
+.ill { width: 100%; height: auto; display: block; }
+.ill .s { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ill .sw { fill: var(--card); stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+.ill .g { fill: var(--marker); }
+.ill .gs { fill: var(--marker); stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+.ill .k { fill: var(--ink); }
+.ill .w { fill: var(--card); }
+.ill .r { fill: none; stroke: var(--orange); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.ill .rf { fill: var(--orange); }
+.ill .bf { fill: var(--green); }
+.ill .tr { font-family: var(--f-geo); font-weight: 600; fill: #e2440c; font-size: 18px; }
+.ill .tk { font-family: var(--f-body); fill: var(--ink); font-size: 14px; font-weight: 700; }
+.ill .tm { font-family: var(--f-body); fill: var(--muted); font-size: 12px; }
+.ill .tw { font-family: var(--f-body); fill: var(--on-ink); font-size: 15px; font-weight: 800; }
+.ill .mono { font-family: var(--f-body); font-weight: 700; fill: var(--muted); font-size: 11px; }
+.ill .rough { filter: url(#rough); }
+
+/* rodapé laranja */
+.foot-band { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; }
+.foot-band h2 { font-size: clamp(30px, 5.4vw, 68px); line-height: .9; max-width: 16ch; }
+@media (max-width: 600px) { .foot-band { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+
+<!-- filtro de "traço de marcador", usado nas ilustrações -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+    <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#ff5419" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  </defs>
+</svg>
+
+<header class="topbar">
+  <div class="bar">
+    <a class="brand" href="#capa" data-go="capa">Roteiros da Collab</a>
+    <nav class="tabs" aria-label="Páginas">
+      <a href="#capa" data-go="capa"><b>01</b>Capa</a>
+      <a href="#apresentacao" data-go="apresentacao"><b>02</b>Apresentação</a>
+      <a href="#tutorial" data-go="tutorial"><b>03</b>Tutorial</a>
+      <a href="#downloads" data-go="downloads"><b>04</b>Downloads</a>
+    </nav>
+  </div>
+</header>
+
+<main class="deck">
+
+<!-- ================= 01 CAPA ================= -->
+<section class="page" id="capa" aria-label="Capa">
+  <div class="slide">
+    <div class="photo-box cover-photo">
+      <img src="arquivos/foto.jpg" alt="Foto em preto e branco de uma mão escrevendo num papel, com uma caneta" width="735" height="490">
+      <span class="crop tl" aria-hidden="true"></span><span class="crop tr" aria-hidden="true"></span><span class="crop bl" aria-hidden="true"></span><span class="crop br" aria-hidden="true"></span>
+      <h1 class="heavy" aria-label="Roteiros da Collab">Roteiros</h1>
+    </div>
+    <div class="cover-band orange">
+      <div class="in" style="background:var(--orange)">
+        <p class="heavy da" aria-hidden="true">Da Collab</p>
+        <div class="band-grid">
+          <p class="meta">(2026)<span>Skill para o Claude</span></p>
+          <p>Skill para o Claude que gera roteiros virais.</p>
+          <p>Feita a partir dos roteiros da Collab, do Arthur Miller e da Giullya Becker. <a href="#apresentacao" data-go="apresentacao">Ler mais</a></p>
+          <svg class="reels" viewBox="0 0 170 84" aria-hidden="true">
+            <circle cx="42" cy="42" r="37"/><circle cx="128" cy="42" r="37"/>
+            <circle class="hole" cx="42" cy="22" r="7"/><circle class="hole" cx="23" cy="48" r="7"/><circle class="hole" cx="61" cy="48" r="7"/><circle class="hole" cx="42" cy="42" r="3"/>
+            <circle class="hole" cx="128" cy="22" r="7"/><circle class="hole" cx="109" cy="48" r="7"/><circle class="hole" cx="147" cy="48" r="7"/><circle class="hole" cx="128" cy="42" r="3"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 02 APRESENTAÇÃO ================= -->
+<section class="page" id="apresentacao" aria-label="Apresentação">
+  <div class="slide reveal">
+    <div class="in">
+      <div class="metarow" style="margin-bottom:clamp(18px,3vw,32px)">
+        <p class="meta">(02)<span>Apresentação</span></p>
+        <p class="meta">Collab,</p>
+        <p class="meta">Roteiros virais</p>
+      </div>
+      <div class="welcome">
+        <div class="photo-box"><img src="arquivos/foto.jpg" alt="" width="735" height="490"></div>
+        <p class="vert" aria-hidden="true">apresentação</p>
+        <div class="welcome-text">
+          <span class="dot-o" aria-hidden="true"></span>
+          <p class="label">Sobre a skill</p>
+          <h2>Como essa skill nasceu</h2>
+          <p class="lead">A Roteiros da Collab é uma skill para o Claude. Uma skill funciona como um manual que o Claude lê antes de trabalhar. Com ela instalada, ele já sabe como a gente escreve roteiro.</p>
+          <div class="cols">
+            <div>
+              <p class="label">Feita a partir de roteiros de verdade</p>
+              <p>Ninguém inventou essas regras do zero. A skill foi construída em cima de roteiros que já funcionam: <strong>os roteiros da própria Collab, os roteiros do Arthur Miller e os roteiros da Giullya Becker</strong>.</p>
+              <p>A gente desmontou esses vídeos parte por parte. Olhamos como cada um prende a atenção nos primeiros segundos, como a tensão vai subindo, onde entra a virada e como o vídeo termina rápido. Depois transformamos esse jeito de contar história em regras que o Claude segue.</p>
+              <p>Por isso, <strong>todos os roteiros que a skill gera são baseados nos roteiros deles</strong>. A estrutura, o ritmo e os tipos de gancho vêm dali.</p>
+            </div>
+            <div>
+              <p class="label">Para que ela serve</p>
+              <p>O objetivo é otimizar o nosso tempo na hora de criar roteiro. Aquela parte demorada de pegar uma ideia solta e encaixar numa estrutura que prende o público fica com o Claude. O nosso tempo vai para o que importa: pensar a ideia.</p>
+              <p>E isso não quer dizer que o Claude escreve tudo. Às vezes você manda só o tema e ele monta o roteiro inteiro. Às vezes você manda a ideia, o conceito e até umas falas prontas, e ele só estrutura. É uma <strong>criação conjunta entre a nossa cabeça e o Claude</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" aria-hidden="true"><span>ch.2</span><i></i><span>2026</span></div>
+    </div>
+  </div>
+
+  <div class="slide reveal">
+    <div class="in" style="display:grid;gap:clamp(28px,4vw,48px)">
+      <div class="split">
+        <p class="label">Baseada em</p>
+        <div class="names" aria-label="Referências da skill">
+          <div><span class="heavy">Collab</span><span class="meta">Nossos roteiros</span></div>
+          <div><span class="heavy">Arthur Miller</span><span class="meta">Referência</span></div>
+          <div><span class="heavy">Giullya Becker</span><span class="meta">Referência</span></div>
+        </div>
+      </div>
+      <div class="split">
+        <p class="label">Na prática</p>
+        <div class="trio">
+          <div><span class="meta">(01)</span><span class="heavy">Você traz</span><p>O tema, a ideia, o conceito ou as falas que já tem.</p></div>
+          <div><span class="meta">(02)</span><span class="heavy">O Claude estrutura</span><p>Encaixa tudo no arco de 3 atos, com gancho, virada e CTA.</p></div>
+          <div><span class="meta">(03)</span><span class="heavy">Vocês ajustam</span><p>Pede mudanças até o roteiro ficar com a sua cara.</p></div>
+        </div>
+      </div>
+      <div class="split">
+        <p class="label">Cada roteiro tem</p>
+        <div>
+          <p style="margin-bottom:18px;max-width:62ch">Uma pequena história em 3 atos. A tensão sobe devagar até o clímax e depois o vídeo termina rápido, o mesmo desenho dos vídeos de referência.</p>
+          <div class="arc-scroll">
+        <svg class="ill" viewBox="0 0 900 300" role="img" aria-label="Curva de tensão do roteiro: sobe do gancho até o clímax e cai rápido até o fim">
+          <rect class="g" x="20" y="40" width="220" height="200" opacity=".35"/>
+          <rect class="g" x="240" y="40" width="420" height="200" opacity=".6"/>
+          <rect class="g" x="660" y="40" width="220" height="200" opacity=".35"/>
+          <text class="tk" x="30" y="30">1º ATO · Apresentação</text>
+          <text class="tk" x="250" y="30">2º ATO · Conflito</text>
+          <text class="tk" x="670" y="30">3º ATO · Resolução</text>
+          <path class="s rough" d="M40 220 C 90 200, 130 196, 170 186 C 220 172, 260 168, 300 160 C 350 148, 380 126, 430 118 C 470 112, 500 140, 540 134 C 590 126, 640 80, 700 56 C 760 110, 800 190, 860 216"/>
+          <g class="rf"><circle cx="58" cy="214" r="6"/><circle cx="130" cy="196" r="5"/><circle cx="205" cy="176" r="5"/><circle cx="310" cy="158" r="5"/><circle cx="430" cy="118" r="7"/><circle cx="500" cy="138" r="5"/><circle cx="580" cy="118" r="5"/><circle cx="700" cy="56" r="8"/><circle cx="780" cy="152" r="5"/><circle cx="855" cy="214" r="6"/></g>
+          <g class="tm">
+            <text x="44" y="254">Gancho</text><text x="104" y="226">Incidente</text><text x="176" y="206">Crise inicial</text>
+            <text x="270" y="188">Desenvolvimentos</text><text x="388" y="100">Grande virada</text><text x="480" y="166">Desastre</text>
+            <text x="566" y="104">Crise</text><text x="712" y="52">Clímax</text><text x="790" y="148">Desfecho</text><text x="820" y="254">Fim / CTA</text>
+          </g>
+          <text class="tr" x="60" y="285" font-size="16">gancho visual + gancho da fala</text>
+          <path class="r" d="M150 272 Q 110 262 70 236" marker-end="url(#ah)"/>
+          <text class="mono" x="20" y="296">0s</text><text class="mono" x="852" y="296">60-90s</text>
+        </svg>
+      </div>
+          <div class="facts">
+            <div class="fact"><b>Gancho duplo</b><span>Uma imagem que prende o olho e uma frase que dá o motivo para ficar.</span></div>
+            <div class="fact"><b>3 formatos</b><span>Mini-filme com metáfora, teoria em passos ou aula com história.</span></div>
+            <div class="fact"><b>4+ takes criativos</b><span>POV do objeto, whip pan, dolly zoom e outros, pensados para gravar no celular.</span></div>
+            <div class="fact"><b>Roteiro + PDF</b><span>O texto sai no chat e num PDF com storyboard desenhado.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 03 TUTORIAL ================= -->
+<section class="page" id="tutorial" aria-label="Tutorial">
+  <div class="slide acid reveal">
+    <div class="in">
+      <div class="metarow">
+        <p class="meta">(03)<span>Passo a passo</span></p>
+        <p class="meta">Do zero,</p>
+        <p class="meta">Ao primeiro roteiro</p>
+      </div>
+      <div class="photo-box prod-photo">
+        <img src="arquivos/foto.jpg" alt="" width="735" height="490">
+        <span class="crop tl" aria-hidden="true"></span><span class="crop tr" aria-hidden="true"></span><span class="crop bl" aria-hidden="true"></span><span class="crop br" aria-hidden="true"></span>
+      </div>
+      <h2 class="mirror-word"><span class="heavy">Tutorial</span><span class="heavy echo" aria-hidden="true"><span>Tutorial</span></span></h2>
+      <div class="tut-intro">
+        <p>Siga um passo de cada vez, com calma. Não precisa saber nada de tecnologia. Você vai precisar de:</p>
+        <div class="needs"><span>Um computador</span><span>Internet</span><span>Uma conta no Claude</span><span>O arquivo .zip da skill</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div class="in">
+<!-- PARTE 1 -->
+    <div class="reveal part-title"><span class="eyebrow">Parte 1</span><h3>Instalar o Claude</h3></div>
+    <ol class="steps">
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Entre no site do Claude</h4>
+          <p>Abra o navegador (Chrome, Safari, o que você usa) e digite na barra de cima: <code>claude.ai/download</code>. Aperte Enter.</p>
+          <p>Clique no botão de baixar. O site já mostra a versão certa para o seu computador (Windows ou Mac).</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Navegador aberto no site claude.ai/download com o botão de baixar circulado"><g class="rough">
+          <rect class="sw" x="20" y="18" width="360" height="214" rx="10"/>
+          <path class="s" d="M20 52 H380"/>
+          <circle class="g" cx="40" cy="35" r="5"/><circle class="g" cx="56" cy="35" r="5"/><circle class="g" cx="72" cy="35" r="5"/>
+          <rect class="sw" x="96" y="26" width="230" height="18" rx="9" stroke-width="2"/>
+          <text class="tk" x="110" y="40" font-size="12">claude.ai/download</text>
+          <text class="tk" x="140" y="104" font-size="26">Claude</text>
+          <text class="tm" x="122" y="126">para o seu computador</text>
+          <rect class="k" x="130" y="146" width="140" height="42" rx="8"/>
+          <text class="tw" x="170" y="173">Baixar</text>
+          <ellipse class="r" cx="200" cy="167" rx="92" ry="34"/>
+          <text class="tr" x="292" y="222">clica aqui!</text>
+          <path class="r" d="M300 206 Q 300 190 286 182" marker-end="url(#ah)"/>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Instale o programa</h4>
+          <p><b>No Windows:</b> abra a pasta Downloads e dê dois cliques no arquivo do Claude. Ele instala sozinho.</p>
+          <p><b>No Mac:</b> dê dois cliques no arquivo baixado e arraste o ícone do Claude para a pasta Aplicativos.</p>
+          <p class="tip">Se aparecer uma pergunta tipo "Deseja permitir?", clique em Sim ou Abrir.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Windows: dois cliques no instalador. Mac: arrastar o ícone para Aplicativos"><g class="rough">
+          <text class="tk" x="34" y="36">Windows</text>
+          <path class="sw" d="M44 56 H96 L116 76 V150 H44 Z"/><path class="s" d="M96 56 V76 H116"/>
+          <text class="tm" x="40" y="174">Claude Setup</text>
+          <text class="tr" x="40" y="206">2 cliques</text>
+          <path class="r" d="M130 90 l14 -14 M134 106 l18 -4 M128 120 l14 10"/>
+          <path class="s" d="M200 30 V220" stroke-dasharray="6 8"/>
+          <text class="tk" x="226" y="36">Mac</text>
+          <rect class="gs" x="226" y="64" width="54" height="54" rx="14"/>
+          <path class="s" d="M253 76 V106 M238 91 H268 M242 80 L264 102 M264 80 L242 102" stroke-width="2.5"/>
+          <path class="sw" d="M318 82 H344 L352 90 H384 V146 H318 Z"/>
+          <text class="tm" x="310" y="168">Aplicativos</text>
+          <path class="r" d="M284 92 Q 300 70 314 104" marker-end="url(#ah)"/>
+          <text class="tr" x="236" y="206">arrasta</text>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Abra o Claude e entre na sua conta</h4>
+          <p>Abra o Claude (ele aparece no menu Iniciar ou na pasta Aplicativos). Entre com o seu e-mail ou com o Google.</p>
+          <p class="tip">Não quer instalar nada? Dá para fazer tudo pelo navegador, em <code>claude.ai</code>. Os próximos passos são iguais.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Tela de login do Claude com botão Continuar com Google e campo de e-mail"><g class="rough">
+          <rect class="sw" x="70" y="18" width="260" height="214" rx="12"/>
+          <text class="tk" x="152" y="58" font-size="20">Entrar</text>
+          <rect class="sw" x="100" y="78" width="200" height="36" rx="8" stroke-width="2"/>
+          <circle class="bf" cx="124" cy="96" r="8"/>
+          <text class="tk" x="140" y="101" font-size="13">Continuar com Google</text>
+          <text class="tm" x="188" y="136">ou</text>
+          <rect class="sw" x="100" y="148" width="200" height="32" rx="8" stroke-width="2"/>
+          <text class="tm" x="114" y="169">seu e-mail</text>
+          <rect class="k" x="100" y="190" width="200" height="30" rx="8"/>
+          <text class="tw" x="160" y="210" font-size="13">Continuar</text>
+          <path class="r" d="M40 70 Q 60 100 96 96" marker-end="url(#ah)"/>
+          <text class="tr" x="8" y="60" font-size="16">sua conta</text>
+        </g></svg></div>
+      </li>
+    </ol>
+
+    <!-- PARTE 2 -->
+    <div class="reveal part-title"><span class="eyebrow">Parte 2</span><h3>Instalar a skill</h3></div>
+    <ol class="steps" style="counter-reset: passo 3">
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Baixe o arquivo da skill</h4>
+          <p>Vá na página <a href="#downloads" data-go="downloads">4. Downloads</a> deste site e clique em <b>Baixar a skill (.zip)</b>. O arquivo <code>roteiros-collab.zip</code> vai para a sua pasta Downloads.</p>
+          <p class="tip"><b>Não abra nem descompacte o .zip.</b> O Claude precisa dele fechado, do jeito que veio.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Arquivo roteiros-collab.zip indo para a pasta Downloads, com aviso de não descompactar"><g class="rough">
+          <path class="sw" d="M60 40 H124 L148 64 V170 H60 Z"/><path class="s" d="M124 40 V64 H148"/>
+          <rect class="g" x="96" y="40" width="12" height="130"/>
+          <path class="s" d="M96 60 H108 M96 76 H108 M96 92 H108 M96 108 H108" stroke-width="2"/>
+          <rect class="sw" x="90" y="120" width="24" height="26" rx="3" stroke-width="2"/>
+          <text class="tk" x="36" y="196" font-size="13">roteiros-collab.zip</text>
+          <path class="r" d="M170 106 H240" marker-end="url(#ah)"/>
+          <path class="sw" d="M256 76 H292 L302 88 H356 V160 H256 Z"/>
+          <text class="tm" x="276" y="182">Downloads</text>
+          <text class="tr" x="204" y="230" font-size="17">não descompacta!</text>
+          <path class="r" d="M188 214 l12 12 M200 214 l-12 12"/>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Abra as Configurações</h4>
+          <p>No Claude, olhe para o canto de baixo, à esquerda. Clique no seu nome (ou na bolinha com a sua inicial).</p>
+          <p>Vai abrir um menu. Clique em <b>Configurações</b>.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Menu aberto a partir do nome do usuário no canto inferior esquerdo, com Configurações circulado"><g class="rough">
+          <rect class="sw" x="16" y="16" width="368" height="218" rx="10"/>
+          <rect class="g" x="16" y="16" width="110" height="218" rx="10"/>
+          <path class="w" d="M30 40 H110 V50 H30 Z M30 62 H96 V72 H30 Z M30 84 H104 V94 H30 Z"/>
+          <circle class="k" cx="38" cy="210" r="12"/><text class="tw" x="33" y="215" font-size="12">V</text>
+          <text class="tk" x="56" y="215" font-size="12">Seu nome</text>
+          <rect class="sw" x="30" y="120" width="150" height="74" rx="8" stroke-width="2"/>
+          <rect class="g" x="36" y="128" width="138" height="26" rx="5"/>
+          <text class="tk" x="46" y="146">Configurações</text>
+          <text class="tm" x="46" y="178">Sair</text>
+          <ellipse class="r" cx="106" cy="141" rx="84" ry="22"/>
+          <path class="r" d="M150 214 Q 180 210 110 214" opacity="0"/>
+          <path class="r" d="M240 200 Q 200 230 64 214" marker-end="url(#ah)"/>
+          <text class="tr" x="236" y="190" font-size="17">1. clica no nome</text>
+          <text class="tr" x="200" y="120" font-size="17">2. Configurações</text>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Entre em Capacidades</h4>
+          <p>No menu da esquerda das Configurações, clique em <b>Capacidades</b>.</p>
+          <p>Procure a opção <b>Execução de código e criação de arquivos</b> e deixe ela <b>ligada</b> (a chavinha fica colorida). A skill precisa disso para criar o PDF.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Configurações com a aba Capacidades selecionada e a chave de execução de código ligada"><g class="rough">
+          <rect class="sw" x="16" y="16" width="368" height="218" rx="10"/>
+          <text class="tk" x="34" y="46" font-size="16">Configurações</text>
+          <text class="tm" x="34" y="80">Geral</text><text class="tm" x="34" y="104">Conta</text><text class="tm" x="34" y="128">Privacidade</text>
+          <rect class="g" x="26" y="138" width="106" height="26" rx="5"/>
+          <text class="tk" x="34" y="156">Capacidades</text>
+          <text class="tm" x="34" y="184">Conectores</text>
+          <path class="s" d="M146 60 V220" stroke-width="2"/>
+          <text class="tk" x="162" y="80" font-size="13">Execução de código e</text>
+          <text class="tk" x="162" y="96" font-size="13">criação de arquivos</text>
+          <rect class="bf" x="320" y="76" width="44" height="24" rx="12"/><circle class="w" cx="352" cy="88" r="9"/>
+          <ellipse class="r" cx="342" cy="88" rx="34" ry="22"/>
+          <path class="s" d="M162 124 H360 M162 146 H320 M162 168 H340" stroke-width="2" opacity=".35"/>
+          <text class="tr" x="250" y="214" font-size="17">tem que estar ligado</text>
+          <path class="r" d="M330 196 Q 352 160 344 116" marker-end="url(#ah)"/>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Envie a skill</h4>
+          <p>Ainda em Capacidades, desça a tela até a parte <b>Skills</b>. Clique no botão de adicionar ou enviar skill.</p>
+          <p>Vai abrir uma janela. Escolha o arquivo <code>roteiros-collab.zip</code> na pasta Downloads (ou arraste ele para dentro da janela).</p>
+          <p class="tip">O nome do botão pode mudar um pouquinho de uma versão para outra, mas fica sempre nessa parte de Skills.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Seção Skills com o botão de enviar e uma janela para escolher o arquivo zip"><g class="rough">
+          <rect class="sw" x="16" y="16" width="368" height="218" rx="10"/>
+          <text class="tk" x="34" y="48" font-size="16">Skills</text>
+          <rect class="k" x="262" y="30" width="104" height="28" rx="7"/>
+          <text class="tw" x="272" y="49" font-size="12">+ Enviar skill</text>
+          <ellipse class="r" cx="314" cy="44" rx="62" ry="22"/>
+          <rect class="sw" x="60" y="80" width="280" height="136" rx="10" stroke-width="2"/>
+          <rect class="s" x="80" y="98" width="240" height="98" rx="8" stroke-dasharray="7 7" stroke-width="2"/>
+          <path class="sw" d="M180 110 H210 L222 122 V164 H180 Z" stroke-width="2"/>
+          <rect class="g" x="196" y="110" width="7" height="54"/>
+          <text class="tm" x="132" y="186">arraste o .zip aqui</text>
+          <text class="tr" x="32" y="232" font-size="15">escolhe o roteiros-collab.zip</text>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Confira se ficou ligada</h4>
+          <p>A <b>Roteiros Collab</b> vai aparecer na lista de Skills. Veja se a chavinha do lado dela está ligada.</p>
+          <p>Pronto, a skill está instalada. Você só faz isso uma vez.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Lista de Skills com Roteiros Collab ligada"><g class="rough">
+          <rect class="sw" x="16" y="16" width="368" height="218" rx="10"/>
+          <text class="tk" x="34" y="48" font-size="16">Skills</text>
+          <rect class="sw" x="34" y="72" width="332" height="58" rx="8" stroke-width="2"/>
+          <rect class="gs" x="48" y="84" width="34" height="34" rx="8" stroke-width="2"/>
+          <path class="s" d="M56 104 l6 6 l12 -14" stroke-width="2.5"/>
+          <text class="tk" x="96" y="98" font-size="15">Roteiros Collab</text>
+          <text class="tm" x="96" y="116">Cria roteiros de vídeo curtos…</text>
+          <rect class="bf" x="306" y="89" width="44" height="24" rx="12"/><circle class="w" cx="338" cy="101" r="9"/>
+          <path class="s" d="M34 160 H366 M34 190 H300" stroke-width="2" opacity=".3"/>
+          <text class="tr" x="200" y="226" font-size="20">instalada!</text>
+          <path class="r" d="M300 206 Q 340 180 330 130" marker-end="url(#ah)"/>
+        </g></svg></div>
+      </li>
+    </ol>
+
+    <!-- PARTE 3 -->
+    <div class="reveal part-title"><span class="eyebrow">Parte 3</span><h3>Usar a skill</h3></div>
+    <ol class="steps" style="counter-reset: passo 8">
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Peça o seu roteiro</h4>
+          <p>Abra uma conversa nova no Claude e escreva assim, trocando o tema pelo seu:</p>
+          <div class="copy-row">
+            <span class="prompt-line" id="prompt-text">Roteiros Collab: roteiro sobre [tema]</span>
+            <button type="button" id="copy-prompt">Copiar</button>
+          </div>
+          <p class="tip">Exemplo: "Roteiros Collab: roteiro sobre procrastinação". Se quiser, conte mais: a ideia que você teve, o conceito, a duração, se é collab com alguma marca.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Caixa de mensagem do Claude com o pedido Roteiros Collab: roteiro sobre procrastinação"><g class="rough">
+          <rect class="sw" x="16" y="16" width="368" height="218" rx="10"/>
+          <text class="tk" x="110" y="80" font-size="18">Como posso ajudar?</text>
+          <rect class="sw" x="36" y="120" width="328" height="64" rx="14" stroke-width="2"/>
+          <text class="tk" x="52" y="148" font-size="13">Roteiros Collab: roteiro sobre</text>
+          <text class="tk" x="52" y="166" font-size="13">procrastinação</text>
+          <circle class="k" cx="338" cy="160" r="14"/><path class="s" d="M338 167 V153 M332 158 L338 152 L344 158" style="stroke: var(--on-ink)" stroke-width="2.5"/>
+          <path class="r" d="M52 172 H160"/>
+          <text class="tr" x="60" y="214" font-size="17">troca pelo seu tema</text>
+          <path class="r" d="M240 206 Q 300 214 334 180" marker-end="url(#ah)"/>
+          <text class="tr" x="282" y="230" font-size="14">envia</text>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Receba o roteiro e o PDF</h4>
+          <p>O Claude escreve o roteiro completo no chat, parte por parte: gancho, conflito, virada, clímax e CTA, com as falas e os takes de câmera.</p>
+          <p>No fim ele entrega um <b>PDF com storyboard</b>. Clique nele para baixar.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Resposta do Claude com o roteiro em texto e um anexo em PDF para baixar"><g class="rough">
+          <rect class="sw" x="16" y="16" width="368" height="218" rx="10"/>
+          <text class="tk" x="36" y="46" font-size="13">1º ATO · Gancho</text>
+          <path class="s" d="M36 62 H300 M36 78 H260" stroke-width="2" opacity=".4"/>
+          <text class="tk" x="36" y="104" font-size="13">2º ATO · Conflito</text>
+          <path class="s" d="M36 120 H280 M36 136 H230" stroke-width="2" opacity=".4"/>
+          <rect class="sw" x="36" y="156" width="230" height="56" rx="8" stroke-width="2"/>
+          <path class="rf" d="M50 166 H74 L84 176 V202 H50 Z"/>
+          <text class="tw" x="54" y="192" font-size="10" style="fill:#fff">PDF</text>
+          <text class="tk" x="96" y="180" font-size="13">roteiro-procrastinacao</text>
+          <text class="tm" x="96" y="198">PDF · clique para baixar</text>
+          <path class="r" d="M300 150 Q 320 180 272 186" marker-end="url(#ah)"/>
+          <text class="tr" x="282" y="140" font-size="17">seu PDF</text>
+        </g></svg></div>
+      </li>
+
+      <li class="reveal step">
+        <div class="step-text">
+          <span class="step-num"></span>
+          <h4>Ajuste junto com ele</h4>
+          <p>Não gostou de alguma parte? É só pedir. Escreva, por exemplo: "deixa o gancho mais curto", "usa essa fala que eu escrevi" ou "muda o formato para mini-filme".</p>
+          <p>Ele refaz o roteiro e o PDF. Quanto mais da sua ideia você mandar, mais o roteiro fica com a sua cara.</p>
+        </div>
+        <div class="step-pic"><svg class="ill" viewBox="0 0 400 250" role="img" aria-label="Conversa com pedidos de ajuste no roteiro"><g class="rough">
+          <rect class="sw" x="16" y="16" width="368" height="218" rx="10"/>
+          <rect class="g" x="150" y="36" width="214" height="34" rx="14"/>
+          <text class="tk" x="166" y="58" font-size="13">deixa o gancho mais curto</text>
+          <path class="s" d="M36 92 H260 M36 108 H220" stroke-width="2" opacity=".4"/>
+          <rect class="g" x="128" y="130" width="236" height="34" rx="14"/>
+          <text class="tk" x="142" y="152" font-size="13">usa essa fala que eu escrevi</text>
+          <path class="s" d="M36 186 H270 M36 202 H200" stroke-width="2" opacity=".4"/>
+          <text class="tr" x="236" y="214" font-size="18">criação conjunta</text>
+        </g></svg></div>
+      </li>
+    </ol>
+
+    <div class="reveal trouble" aria-label="Problemas comuns">
+      <div><b>Não acho a parte Skills</b><p>Confira se a opção "Execução de código e criação de arquivos" está ligada em Capacidades. A parte de Skills costuma aparecer logo abaixo. Se mesmo assim não aparecer, o seu plano do Claude pode não ter Skills.</p></div>
+      <div><b>Deu erro ao enviar o arquivo</b><p>Envie o arquivo <code>roteiros-collab.zip</code> do jeito que ele foi baixado, sem descompactar e sem renomear.</p></div>
+      <div><b>O Claude não usou a skill</b><p>Comece a mensagem com "Roteiros Collab:" e veja se a chavinha da skill está ligada em Configurações.</p></div>
+    </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================= 04 DOWNLOADS ================= -->
+<section class="page" id="downloads" aria-label="Downloads">
+  <div class="slide green reveal">
+    <div class="in">
+      <p class="wordmark">— Roteiros da Collab —</p>
+      <div class="green-grid">
+        <div class="photo-box"><img src="arquivos/foto.jpg" alt="" width="735" height="490"></div>
+        <div class="ruled">
+          <h2 class="geo">Pegue a skill</h2>
+          <p class="geo" aria-hidden="true">e o roteiro</p>
+          <p>À esquerda, o arquivo para instalar no Claude. À direita, um roteiro de verdade que a skill criou, para você ver o que vem pronto.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide reveal">
+    <div class="in vertical-layout">
+      <div class="rail" aria-hidden="true"><span class="heavy">Downloads</span><span class="meta">(04) · 2026</span></div>
+<div class="dl-grid">
+      <div class="reveal panel">
+        <h3>A skill</h3>
+        <div class="file-card">
+          <svg class="ill icon" viewBox="0 0 64 76" aria-hidden="true"><g class="rough"><path class="sw" d="M6 4 H42 L58 20 V72 H6 Z"/><path class="s" d="M42 4 V20 H58"/><rect class="g" x="26" y="4" width="8" height="40"/><rect class="sw" x="22" y="40" width="16" height="16" rx="2" stroke-width="2"/></g></svg>
+          <div><b>roteiros-collab.zip</b><span>194 KB · instala em Configurações</span></div>
+        </div>
+        <button class="btn big-btn" type="button" data-file="arquivos/roteiros-collab.zip.b64.txt" data-b64="1" data-direct="arquivos/roteiros-collab.zip" data-name="roteiros-collab.zip">Baixar a skill (.zip)</button>
+        <p class="dl-msg" role="status" aria-live="polite"></p>
+        <div>
+          <p class="eyebrow" style="margin-bottom:10px">O que tem dentro</p>
+          <ul class="inside">
+            <li><code>SKILL.md</code><span>as instruções da skill</span></li>
+            <li><code>references/</code><span>estruturas e takes criativos</span></li>
+            <li><code>scripts/gerar_pdf.py</code><span>monta o PDF com storyboard</span></li>
+            <li><code>assets/</code><span>a fonte das anotações</span></li>
+            <li><code>exemplo/</code><span>o roteiro de exemplo</span></li>
+          </ul>
+        </div>
+        <p class="tip" style="font-size:15px;color:var(--muted)">Não descompacte. Envie o .zip inteiro no Claude, como mostra o <a href="#tutorial" data-go="tutorial">tutorial</a>.</p>
+      </div>
+
+      <div class="reveal panel">
+        <span class="eyebrow">Roteiro de referência</span>
+        <h3>Por que você procrastina (e não é preguiça)</h3>
+        <div class="ref-meta">
+          <div><small>Formato</small><b>Aula com história</b></div>
+          <div><small>Duração</small><b>70 a 80s</b></div>
+          <div><small>Gravação</small><b>Vertical (9:16)</b></div>
+        </div>
+        <div class="viewer">
+          <div class="viewer-main"><img id="pdf-main" src="arquivos/pag-1.jpg" alt="Página 1 do roteiro de exemplo em PDF" width="661" height="935"></div>
+          <div class="thumbs" role="group" aria-label="Páginas do PDF">
+            <button type="button" aria-pressed="true" data-page="1"><img src="arquivos/pag-1.jpg" alt="Página 1"></button>
+            <button type="button" aria-pressed="false" data-page="2"><img src="arquivos/pag-2.jpg" alt="Página 2"></button>
+            <button type="button" aria-pressed="false" data-page="3"><img src="arquivos/pag-3.jpg" alt="Página 3"></button>
+            <button type="button" aria-pressed="false" data-page="4"><img src="arquivos/pag-4.jpg" alt="Página 4"></button>
+          </div>
+          <span class="thumbs-label">Toque numa página para ver maior</span>
+        </div>
+        <button class="btn ghost big-btn" type="button" data-file="arquivos/roteiro-procrastinacao.pdf" data-direct="arquivos/roteiro-procrastinacao.pdf" data-name="roteiro-procrastinacao.pdf">Baixar o roteiro de exemplo (.pdf)</button>
+        <p class="dl-msg" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<footer class="slide orange reveal" style="background:var(--orange)">
+  <div class="in foot-band">
+    <h2 class="heavy">Qualquer problema, entre em contato com a gente.</h2>
+    <p class="meta" style="text-align:right">Roteiros da Collab<span>Skill para o Claude · 2026</span></p>
+  </div>
+</footer>
+</main>
+
+<script>
+(function () {
+  var ids = ["capa", "apresentacao", "tutorial", "downloads"];
+  var pages = ids.map(function (id) { return document.getElementById(id); });
+  var tabs = document.querySelectorAll(".tabs a");
+
+  function mark(id) {
+    tabs.forEach(function (a) {
+      if (a.dataset.go === id) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-go]");
+    if (!a) return;
+    var target = document.getElementById(a.dataset.go);
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    mark(a.dataset.go);
+  });
+
+  // marca no menu a página que está na tela
+  var current = "capa";
+  mark(current);
+  function spy() {
+    var line = window.innerHeight * 0.35, found = ids[0];
+    pages.forEach(function (p) { if (p.getBoundingClientRect().top <= line) found = p.id; });
+    if (found !== current) { current = found; mark(found); }
+  }
+  window.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  var start = (location.hash || "").slice(1);
+  if (ids.indexOf(start) > 0) { document.getElementById(start).scrollIntoView(); }
+  spy();
+
+  // Visualizador do PDF
+  var main = document.getElementById("pdf-main");
+  document.querySelectorAll(".thumbs button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var n = b.dataset.page;
+      main.src = "arquivos/pag-" + n + ".jpg";
+      main.alt = "Página " + n + " do roteiro de exemplo em PDF";
+      document.querySelectorAll(".thumbs button").forEach(function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+    });
+  });
+
+  // Copiar o pedido
+  var copyBtn = document.getElementById("copy-prompt");
+  copyBtn.addEventListener("click", function () {
+    var txt = document.getElementById("prompt-text").textContent;
+    var done = function () { copyBtn.textContent = "Copiado"; setTimeout(function () { copyBtn.textContent = "Copiar"; }, 1600); };
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents(document.getElementById("prompt-text"));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      copyBtn.textContent = "Selecionado, use Ctrl+C";
+    };
+    try { navigator.clipboard.writeText(txt).then(done, fallback); } catch (e) { fallback(); }
+  });
+
+  // Downloads
+  var dlPromise = (window.claude && window.claude.use) ? window.claude.use("downloads") : Promise.resolve(null);
+  document.querySelectorAll("button[data-file]").forEach(function (btn) {
+    var msg = btn.nextElementSibling;
+    var label = btn.textContent;
+    btn.addEventListener("click", function () {
+      msg.classList.remove("err");
+      btn.disabled = true; btn.textContent = "Preparando…";
+      var finish = function (text, isErr) {
+        btn.disabled = false; btn.textContent = label;
+        msg.textContent = text || ""; msg.classList.toggle("err", !!isErr);
+      };
+      Promise.all([dlPromise, fetch(btn.dataset.file).then(function (r) {
+        if (!r.ok) throw new Error("fetch");
+        if (!btn.dataset.b64) return r.blob();
+        return r.text().then(function (t) {
+          var bin = atob(t.trim()), bytes = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          return new Blob([bytes]);
+        });
+      })])
+        .then(function (res) {
+          var dl = res[0], blob = res[1];
+          if (!dl) {
+            // fora do claude.ai (site publicado): baixa direto o arquivo
+            var a = document.createElement("a");
+            a.href = btn.dataset.direct; a.download = btn.dataset.name;
+            document.body.appendChild(a); a.click(); a.remove();
+            finish("Pronto! Procure o arquivo na sua pasta Downloads.");
+            return;
+          }
+          return dl.save({ filename: btn.dataset.name, data: blob }).then(function () {
+            finish("Pronto! Procure o arquivo na sua pasta Downloads.");
+          }, function (err) {
+            var c = err && err.code;
+            if (c === "declined") finish("Download cancelado. Clique de novo quando quiser.");
+            else if (c === "rate_limited") finish("Já tem uma janela de download aberta. Confirme ela primeiro.", true);
+            else finish("Não deu para baixar aqui. Tente abrir o site pelo link do claude.ai.", true);
+          });
+        })
+        .catch(function () { finish("Não consegui carregar o arquivo. Recarregue a página e tente de novo.", true); });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
